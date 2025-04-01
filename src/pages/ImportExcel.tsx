@@ -16,10 +16,7 @@ import {
 import { toast } from "sonner";
 import { AlertCircle, FileSpreadsheet, UploadCloud, X, Check, FileWarning } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { importApi } from "@/utils/api";
 import * as XLSX from 'xlsx';
-
-<lov-add-dependency>xlsx@latest</lov-add-dependency>
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"];
@@ -149,7 +146,7 @@ const ImportExcel = () => {
               <FormField
                 control={form.control}
                 name="file"
-                render={({ field: { onChange, ...field } }) => (
+                render={({ field: { onChange, value, ...rest } }) => (
                   <FormItem>
                     <FormLabel>Fichier Excel</FormLabel>
                     <FormControl>
@@ -194,7 +191,7 @@ const ImportExcel = () => {
                           onChange={(e) => {
                             handleFileChange(e);
                           }}
-                          {...field}
+                          {...rest}
                         />
                       </div>
                     </FormControl>
