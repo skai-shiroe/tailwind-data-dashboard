@@ -1,10 +1,10 @@
-import React from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { formatDate } from "@/utils/dateUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDate } from "@/utils/dateUtils";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import React from "react";
 
 export interface Contribuable {
   id: string;
@@ -68,6 +68,8 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
               <TableHead>Date de Dépôt</TableHead>
               <TableHead>Documents</TableHead>
               <TableHead>Quantité</TableHead>
+              <TableHead>Date arrivée Immatriculation</TableHead>
+              <TableHead>Date livraison</TableHead>
               <TableHead>À Jour</TableHead>
               <TableHead>Rejet</TableHead>
               <TableHead>Observation</TableHead>
@@ -82,6 +84,8 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
                 <TableCell>{formatDate(contribuable.dateDepot)}</TableCell>
                 <TableCell>{contribuable.documents}</TableCell>
                 <TableCell>{contribuable.quantite}</TableCell>
+                <TableCell>{formatDate(contribuable.dateArriveeImmat)}</TableCell>
+                <TableCell>{formatDate(contribuable.dateLivraisonSG)}</TableCell>
                 <TableCell>
                   <Badge variant={contribuable.aJour === "Oui" ? "default" : "destructive"}>{contribuable.aJour}</Badge>
                 </TableCell>
