@@ -6,11 +6,13 @@ type ApiError = {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
+    Accept: "*/*",
   },
+  withCredentials: false, // Set to true only if your API requires credentials
 });
 
 const handleErrorMessage = (error: AxiosError<ApiError>): string => {

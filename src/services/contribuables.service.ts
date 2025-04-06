@@ -42,9 +42,14 @@ export interface ContribuablesSearchParams {
 
 export const ContribuablesService = {
   async getContribuables(params: ContribuablesSearchParams = {}) {
-    const { data } = await api.get<ContribuablesApiResponse>("/contribuables", {
-      params,
-    });
-    return data;
+    try {
+      const { data } = await api.get<ContribuablesApiResponse>("/contribuables", {
+        params,
+      });
+      return data;
+    } catch (error) {
+      console.error("Error fetching contribuables:", error);
+      throw error;
+    }
   },
 };
