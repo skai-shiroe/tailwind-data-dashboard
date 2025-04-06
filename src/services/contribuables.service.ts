@@ -80,23 +80,45 @@ export const ContribuablesService = {
 
       console.log("Sending file import request with file:", file.name, file.size, file.type);
 
+      // Go back to the original endpoint: /import
       const { data } = await api.post<ImportResponse>("/import", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        // Add timeout to prevent hanging requests
+        timeout: 30000,
       });
 
       return data;
     } catch (error) {
       console.error("Error importing file details:", error);
-      // Réacheminement de l'erreur avec plus de contexte
+      // Improve error handling
       if (error && typeof error === "object" && "response" in error) {
-        const responseError = error as { response?: { status?: number; data?: unknown; statusText?: string } };
+        const responseError = error as {
+          response?: {
+            status?: number;
+            data?: unknown;
+            statusText?: string;
+          };
+        };
         console.error("API Error Status:", responseError.response?.status);
         console.error("API Error Data:", responseError.response?.data);
         console.error("API Error Text:", responseError.response?.statusText);
+        // Throw a more informative error
+        if (responseError.response?.data) {
+          throw new Error(
+            typeof responseError.response.data === "string"
+              ? responseError.response.data
+              : responseError.response?.data &&
+                typeof responseError.response.data === "object" &&
+                "message" in responseError.response.data
+              ? (responseError.response.data as { message: string }).message
+              : `Erreur d'importation (${responseError.response?.status || "inconnu"})`
+          );
+        }
       }
-      throw error;
+      // If we can't extract more info, rethrow with generic message
+      throw new Error("Échec de l'importation du fichier. Vérifiez le format et réessayez.");
     }
   },
 };

@@ -145,7 +145,6 @@ const ImportExcel = () => {
   const resetForm = () => {
     form.reset();
     setPreview(null);
-
     // Réinitialiser le champ de fichier
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
