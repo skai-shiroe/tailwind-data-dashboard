@@ -254,7 +254,7 @@ const ImportExcel = () => {
         </CardContent>
       </Card>
 
-      {/* Aperçu du fichier */}
+      {/* Aperçu du fichier
       {preview && preview.length > 0 && (
         <Card>
           <CardContent className="pt-6">
@@ -282,7 +282,7 @@ const ImportExcel = () => {
             <div className="text-sm text-muted-foreground mt-4">* Affichage limité aux 10 premières lignes</div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* Guide d'utilisation */}
       <Card>
