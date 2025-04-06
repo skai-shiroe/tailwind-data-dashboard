@@ -30,6 +30,13 @@ export interface ContribuablesApiResponse {
   };
 }
 
+export interface ImportResponse {
+  success: boolean;
+  importedCount: number;
+  totalCount: number;
+  message: string;
+}
+
 export interface ContribuablesSearchParams {
   page?: number;
   pageSize?: number;
@@ -57,12 +64,38 @@ export const ContribuablesService = {
         ...params,
       };
 
-      const { data } = await api.get<ContribuablesApiResponse>("/contribuables", {
+      const { data } = await api.get<ContribuablesApiResponse>("/api/contribuables", {
         params: queryParams,
       });
       return data;
     } catch (error) {
       console.error("Error fetching contribuables:", error);
+      throw error;
+    }
+  },
+  async importFile(file: File): Promise<ImportResponse> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      console.log("Sending file import request with file:", file.name, file.size, file.type);
+
+      const { data } = await api.post<ImportResponse>("/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      return data;
+    } catch (error) {
+      console.error("Error importing file details:", error);
+      // Réacheminement de l'erreur avec plus de contexte
+      if (error && typeof error === "object" && "response" in error) {
+        const responseError = error as { response?: { status?: number; data?: unknown; statusText?: string } };
+        console.error("API Error Status:", responseError.response?.status);
+        console.error("API Error Data:", responseError.response?.data);
+        console.error("API Error Text:", responseError.response?.statusText);
+      }
       throw error;
     }
   },
