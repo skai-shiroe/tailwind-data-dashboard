@@ -1,105 +1,113 @@
-
-import { useState } from "react";
-import { 
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { SearchForm } from "@/components/forms/SearchForm";
-import { ContribuablesTable, Contribuable } from "@/components/tables/ContribuablesTable";
-
-// Données simulées pour la démonstration
-const mockContribuables: Contribuable[] = [
-  {
-    id: "1",
-    nif: "123456789",
-    nom: "SARL EXEMPLE",
-    centreGestionnaire: "DGE",
-    dateArrivee: "10/05/2023",
-    dateLivraison: "12/05/2023",
-    joursTraitement: 2,
-    status: "Livré",
-  },
-  {
-    id: "2",
-    nif: "987654321",
-    nom: "ETS COMMERCIAL",
-    centreGestionnaire: "CIME EST",
-    dateArrivee: "15/05/2023",
-    dateLivraison: "18/05/2023",
-    joursTraitement: 3,
-    status: "Livré",
-  },
-  {
-    id: "3",
-    nif: "456789123",
-    nom: "COMPAGNIE GÉNÉRALE",
-    centreGestionnaire: "CIME OUEST",
-    dateArrivee: "20/05/2023",
-    dateLivraison: "",
-    joursTraitement: 5,
-    status: "En traitement",
-  },
-  {
-    id: "4",
-    nif: "789123456",
-    nom: "SOCIÉTÉ ANONYME",
-    centreGestionnaire: "DGE",
-    dateArrivee: "05/05/2023",
-    dateLivraison: "10/05/2023",
-    joursTraitement: 5,
-    status: "Livré",
-  },
-  {
-    id: "5",
-    nif: "321654987",
-    nom: "ENTREPRISE INDIVIDUELLE",
-    centreGestionnaire: "CIME SUD",
-    dateArrivee: "12/05/2023",
-    dateLivraison: "",
-    joursTraitement: 3,
-    status: "Rejeté",
-  },
-];
+import { ContribuableSearchForm } from "@/components/forms/ContribuableSearchForm";
+import { ContribuablesTable } from "@/components/tables/ContribuablesTable";
+import { useToast } from "@/components/ui/use-toast";
+import { ContribuablesApiResponse, ContribuablesSearchParams, ContribuablesService } from "@/services/contribuables.service";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
 
 const ConsultationContribuables = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<Contribuable[]>([]);
-  const [hasSearched, setHasSearched] = useState(false);
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Fonction pour gérer la recherche
-  const handleSearch = async (data: any) => {
-    setIsLoading(true);
-    setHasSearched(true);
-    
-    try {
-      // Dans une application réelle, appel API
-      // const results = await contribuablesApi.rechercher(data);
-      
-      // Simulation d'une requête API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Filtrage simulé
-      let results = [...mockContribuables];
-      
-      if (data.nif) {
-        results = results.filter(c => c.nif.includes(data.nif));
-      }
-      
-      if (data.centreGestionnaire && data.centreGestionnaire !== "Tous les centres") {
-        results = results.filter(c => c.centreGestionnaire === data.centreGestionnaire);
-      }
-      
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Erreur lors de la recherche:", error);
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
+  // Convert URL parameters to search params object
+  const getSearchParamsObject = (): ContribuablesSearchParams => {
+    const params: ContribuablesSearchParams = {
+      page: Number(searchParams.get("page")) || 1,
+      pageSize: Number(searchParams.get("pageSize")) || 10,
+    };
+
+    // Add other search parameters if they exist in URL
+    const nif = searchParams.get("nif");
+    if (nif) params.nif = nif;
+
+    const raisonSociale = searchParams.get("raisonSociale");
+    if (raisonSociale) params.raisonSociale = raisonSociale;
+
+    const centreGestionnaire = searchParams.get("centreGestionnaire");
+    if (centreGestionnaire) params.centreGestionnaire = centreGestionnaire;
+
+    const dateDebut = searchParams.get("dateDebut");
+    if (dateDebut) params.dateDebut = dateDebut;
+
+    const dateFin = searchParams.get("dateFin");
+    if (dateFin) params.dateFin = dateFin;
+
+    const aJour = searchParams.get("aJour");
+    if (aJour) params.aJour = aJour;
+
+    const rejet = searchParams.get("rejet");
+    if (rejet) params.rejet = rejet;
+
+    return params;
+  };
+
+  // Get the current search params from URL
+  const currentSearchParams = getSearchParamsObject();
+
+  // Fetch data with React Query
+
+  const { data, isLoading, isError, error } = useQuery<ContribuablesApiResponse, Error>({
+    queryKey: ["contribuables", currentSearchParams],
+    queryFn: () => ContribuablesService.getContribuables(currentSearchParams),
+  });
+
+  // Handle search form submission
+  const handleSearch = (params: ContribuablesSearchParams) => {
+    // Create a new URLSearchParams object
+    const newSearchParams = new URLSearchParams();
+
+    // Set the page to 1 when performing a new search
+    newSearchParams.set("page", "1");
+    newSearchParams.set("pageSize", String(currentSearchParams.pageSize));
+
+    // Add other search parameters
+    if (params.nif) newSearchParams.set("nif", params.nif);
+    if (params.raisonSociale) newSearchParams.set("raisonSociale", params.raisonSociale);
+    if (params.centreGestionnaire) newSearchParams.set("centreGestionnaire", params.centreGestionnaire);
+    if (params.dateDebut) newSearchParams.set("dateDebut", params.dateDebut);
+    if (params.dateFin) newSearchParams.set("dateFin", params.dateFin);
+    if (params.aJour) newSearchParams.set("aJour", params.aJour);
+    if (params.rejet) newSearchParams.set("rejet", params.rejet);
+
+    // Update the URL
+    setSearchParams(newSearchParams);
+  };
+
+  // Handle pagination changes
+  const handlePageChange = (page: number) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set("page", String(page));
+    setSearchParams(newSearchParams);
+  };
+
+  // Handle page size changes
+  const handlePageSizeChange = (pageSize: number) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set("page", "1"); // Reset to page 1
+    newSearchParams.set("pageSize", String(pageSize));
+    setSearchParams(newSearchParams);
+  };
+
+  // Show error toast if there's an error
+
+  useEffect(() => {
+    if (isError && error) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la récupération des données",
+        variant: "destructive",
+      });
     }
+  }, [isError, error, toast]);
+
+  // Calculate pagination info
+  const pagination = data?.pagination || {
+    total: 0,
+
+    page: currentSearchParams.page,
+    pageSize: currentSearchParams.pageSize,
+    totalPages: 0,
   };
 
   return (
@@ -107,55 +115,18 @@ const ConsultationContribuables = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Consultation des contribuables</h1>
       </div>
-      
-      {/* Formulaire de recherche */}
-      <SearchForm onSearch={handleSearch} />
-      
-      {/* Résultats ou message initial */}
-      {!hasSearched ? (
-        <div className="text-center py-12 border rounded-md bg-white">
-          <p className="text-muted-foreground">
-            Utilisez le formulaire ci-dessus pour rechercher des contribuables
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Tableau des résultats */}
-          <div className="bg-white rounded-md p-4 border">
-            <h2 className="text-lg font-semibold mb-4">Résultats de recherche</h2>
-            <ContribuablesTable data={searchResults} isLoading={isLoading} />
-            
-            {/* Pagination (seulement si des résultats sont présents) */}
-            {!isLoading && searchResults.length > 0 && (
-              <div className="mt-4">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious href="#" />
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink href="#">1</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink href="#" isActive>
-                        2
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink href="#">3</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationNext href="#" />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+      <ContribuableSearchForm onSearch={handleSearch} initialValues={currentSearchParams} />
+
+      <div className="container mx-auto py-4">
+        <ContribuablesTable
+          data={data?.data || []}
+          isLoading={isLoading}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </div>
     </div>
   );
 };
-
 export default ConsultationContribuables;
