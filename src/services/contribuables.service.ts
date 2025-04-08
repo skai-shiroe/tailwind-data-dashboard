@@ -13,6 +13,7 @@ export interface Contribuable {
   observation: string | null;
   dateArriveeImmat?: string;
   dateLivraisonSG?: string;
+  nombreJoursTraitement:number;
 }
 
 export interface ContribuablesApiResponse {
@@ -39,7 +40,8 @@ export interface ImportResponse {
 
 export interface ContribuablesSearchParams {
   page?: number;
-  pageSize?: number;
+  pageSize?: number; // Gardez cette propriété pour la compatibilité
+  limit?: number;    // Ajoutez cette propriété
   nif?: string;
   raisonSociale?: string;
   centreGestionnaire?: string;
@@ -59,10 +61,15 @@ export const ContribuablesService = {
       // Set default values if not provided
       const queryParams = {
         page: params.page || 1,
-        pageSize: params.pageSize || 10,
+        limit: params.pageSize || params.limit || 10, // Utilisez pageSize comme fallback pour limit
         dateType: params.dateType || "dateDepot",
         ...params,
       };
+
+      // Supprimez pageSize si limit est défini
+      if (queryParams.limit && queryParams.pageSize) {
+        delete queryParams.pageSize;
+      }
 
       const { data } = await api.get<ContribuablesApiResponse>("/api/contribuables", {
         params: queryParams,
@@ -72,8 +79,7 @@ export const ContribuablesService = {
       console.error("Error fetching contribuables:", error);
       throw error;
     }
-  },
-  async importFile(file: File): Promise<ImportResponse> {
+  },  async importFile(file: File): Promise<ImportResponse> {
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -86,7 +92,7 @@ export const ContribuablesService = {
           "Content-Type": "multipart/form-data",
         },
         // Add timeout to prevent hanging requests
-        timeout: 30000,
+        timeout: 300000,
       });
 
       return data;

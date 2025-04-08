@@ -9,49 +9,58 @@ import { useEffect } from "react";
 const ConsultationContribuables = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+      // Convert URL parameters to search params object
+      const getSearchParamsObject = (): ContribuablesSearchParams => {
+        const params: ContribuablesSearchParams = {
+          page: Number(searchParams.get("page")) || 1,
+          limit: Number(searchParams.get("limit")) || 10, // Utilisez limit au lieu de pageSize
+        };
 
-  // Convert URL parameters to search params object
-  const getSearchParamsObject = (): ContribuablesSearchParams => {
-    const params: ContribuablesSearchParams = {
-      page: Number(searchParams.get("page")) || 1,
-      pageSize: Number(searchParams.get("pageSize")) || 10,
-    };
+        // Add other search parameters if they exist in URL
+        const nif = searchParams.get("nif");
+        if (nif) params.nif = nif;
 
-    // Add other search parameters if they exist in URL
-    const nif = searchParams.get("nif");
-    if (nif) params.nif = nif;
+        const raisonSociale = searchParams.get("raisonSociale");
+        if (raisonSociale) params.raisonSociale = raisonSociale;
 
-    const raisonSociale = searchParams.get("raisonSociale");
-    if (raisonSociale) params.raisonSociale = raisonSociale;
+        const centreGestionnaire = searchParams.get("centreGestionnaire");
+        if (centreGestionnaire) params.centreGestionnaire = centreGestionnaire;
 
-    const centreGestionnaire = searchParams.get("centreGestionnaire");
-    if (centreGestionnaire) params.centreGestionnaire = centreGestionnaire;
+        const dateDebut = searchParams.get("dateDebut");
+        if (dateDebut) params.dateDebut = dateDebut;
 
-    const dateDebut = searchParams.get("dateDebut");
-    if (dateDebut) params.dateDebut = dateDebut;
+        const dateFin = searchParams.get("dateFin");
+        if (dateFin) params.dateFin = dateFin;
 
-    const dateFin = searchParams.get("dateFin");
-    if (dateFin) params.dateFin = dateFin;
+        const aJour = searchParams.get("aJour");
+        if (aJour) params.aJour = aJour;
 
-    const aJour = searchParams.get("aJour");
-    if (aJour) params.aJour = aJour;
+        const rejet = searchParams.get("rejet");
+        if (rejet) params.rejet = rejet;
 
-    const rejet = searchParams.get("rejet");
-    if (rejet) params.rejet = rejet;
+        return params;
+      };
 
-    return params;
-  };
+      // Get the current search params from URL
+      const currentSearchParams = getSearchParamsObject();
 
-  // Get the current search params from URL
-  const currentSearchParams = getSearchParamsObject();
+      // Fetch data with React Query
 
-  // Fetch data with React Query
+      const { data, isLoading, isError, error } = useQuery<ContribuablesApiResponse, Error>({
+        queryKey: ["contribuables", currentSearchParams],
+        queryFn: () => ContribuablesService.getContribuables(currentSearchParams),
+      });
 
-  const { data, isLoading, isError, error } = useQuery<ContribuablesApiResponse, Error>({
-    queryKey: ["contribuables", currentSearchParams],
-    queryFn: () => ContribuablesService.getContribuables(currentSearchParams),
-  });
-
+      // Handle page size changes
+      const handlePageSizeChange = (pageSize: number) => {
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.set("page", "1"); // Reset to page 1
+        newSearchParams.set("limit", String(pageSize)); // Utilisez limit au lieu de pageSize
+    
+        console.log(`Changing page size to: ${pageSize}`);
+    
+        setSearchParams(newSearchParams);
+      };
   // Handle search form submission
   const handleSearch = (params: ContribuablesSearchParams) => {
     // Create a new URLSearchParams object
@@ -82,12 +91,16 @@ const ConsultationContribuables = () => {
   };
 
   // Handle page size changes
-  const handlePageSizeChange = (pageSize: number) => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    newSearchParams.set("page", "1"); // Reset to page 1
-    newSearchParams.set("pageSize", String(pageSize));
-    setSearchParams(newSearchParams);
-  };
+  // const handlePageSizeChange = (pageSize: number) => {
+  //   const newSearchParams = new URLSearchParams(searchParams);
+  //   newSearchParams.set("page", "1"); // Reset to page 1
+  //   newSearchParams.set("pageSize", String(pageSize));
+    
+  //   // Log pour déboguer
+  //   console.log(`Changing page size to: ${pageSize}`);
+    
+  //   setSearchParams(newSearchParams);
+  // };
 
   // Show error toast if there's an error
 
@@ -119,7 +132,7 @@ const ConsultationContribuables = () => {
 
       <div className="container mx-auto py-4">
         <ContribuablesTable
-          data={data?.data || []}
+          data={data?.data || []}  // Utilisez directement les données sans transformation
           isLoading={isLoading}
           pagination={pagination}
           onPageChange={handlePageChange}
@@ -127,6 +140,5 @@ const ConsultationContribuables = () => {
         />
       </div>
     </div>
-  );
-};
+  );};
 export default ConsultationContribuables;

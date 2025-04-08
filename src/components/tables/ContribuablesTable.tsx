@@ -3,8 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/utils/dateUtils";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileDown, FileText } from "lucide-react";
 import React from "react";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { saveAs } from 'file-saver';
 
 export interface Contribuable {
   id: string;
@@ -19,6 +23,8 @@ export interface Contribuable {
   observation: string | null;
   dateArriveeImmat?: string;
   dateLivraisonSG?: string;
+  nombreJoursTraitement: number;
+  dateRejet?: string;
 }
 
 interface ContribuablesTableProps {
@@ -33,6 +39,7 @@ interface ContribuablesTableProps {
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
 }
+
 export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
   data,
   isLoading,
@@ -40,6 +47,132 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
   onPageChange,
   onPageSizeChange,
 }) => {
+  // Fonction pour exporter en Excel
+  const exportToExcel = () => {
+    // Préparer les données pour l'export
+    const exportData = data.map(item => ({
+      NIF: item.nif,
+      'Raison Sociale': item.raisonSociale,
+      'Centre Gestionnaire': item.centreGestionnaire,
+      'Date de Dépôt': formatDate(item.dateDepot),
+      'Documents': item.documents,
+      'Quantité': item.quantite,
+      'Date arrivée Immatriculation': formatDate(item.dateArriveeImmat),
+      'Date livraison': formatDate(item.dateLivraisonSG),
+      'Date rejet': formatDate(item.dateRejet),
+      'Observation': item.observation || '-',
+      'Nombre de jours': item.nombreJoursTraitement
+    }));
+
+    // Créer un workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Ajouter la feuille au workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Contribuables");
+    
+    // Générer le fichier Excel
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
+    // Télécharger le fichier
+    saveAs(blob, `contribuables_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // Fonction pour exporter en PDF
+  const exportToPDF = () => {
+    // Créer un document PDF en orientation paysage
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+    
+    // Titre du document
+    doc.setFontSize(16);
+    doc.text("Liste des Contribuables", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Exporté le ${new Date().toLocaleDateString()}`, 14, 22);
+    
+    // Préparer les données pour le tableau avec tous les champs
+    const tableColumn = [
+      "NIF", 
+      "Raison Sociale", 
+      "Centre Gestionnaire", 
+      "Date de Dépôt", 
+      "Documents", 
+      "Quantité",
+      "Date arrivée Immat.",
+      "Date livraison",
+      "Date rejet",
+      "Observation",
+      "Jours"
+    ];
+    
+    const tableRows = data.map(item => [
+      item.nif,
+      item.raisonSociale,
+      item.centreGestionnaire,
+      formatDate(item.dateDepot),
+      item.documents,
+      item.quantite,
+      formatDate(item.dateArriveeImmat),
+      formatDate(item.dateLivraisonSG),
+      formatDate(item.dateRejet),
+      item.observation || "-",
+      item.nombreJoursTraitement
+    ]);
+    
+    // Utiliser autoTable comme une fonction importée
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      theme: 'grid',
+      styles: {
+        fontSize: 7, // Réduire la taille de police pour accommoder plus de colonnes
+        cellPadding: 1,
+        overflow: 'linebreak',
+        halign: 'left'
+      },
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240]
+      },
+      columnStyles: {
+        0: { cellWidth: 20 }, // NIF
+        1: { cellWidth: 30 }, // Raison Sociale
+        2: { cellWidth: 25 }, // Centre Gestionnaire
+        3: { cellWidth: 20 }, // Date de Dépôt
+        4: { cellWidth: 20 }, // Documents
+        5: { cellWidth: 15 }, // Quantité
+        6: { cellWidth: 20 }, // Date arrivée Immat
+        7: { cellWidth: 20 }, // Date livraison
+        8: { cellWidth: 20 }, // Date rejet
+        9: { cellWidth: 30 }, // Observation
+        10: { cellWidth: 15 } // Jours
+      },
+      margin: { top: 30, right: 10, bottom: 10, left: 10 },
+      didDrawPage: (data) => {
+        // Ajouter un pied de page avec numéro de page
+        doc.setFontSize(8);
+        doc.text(
+          `Page ${doc.getNumberOfPages()}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        );
+      }
+    });
+    
+    // Télécharger le PDF
+    doc.save(`contribuables_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   if (isLoading) {
     return (
       <div className="w-full h-48 flex items-center justify-center">
@@ -58,8 +191,30 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Boutons d'exportation */}
+      <div className="flex justify-end space-x-2 mb-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={exportToExcel}
+          className="flex items-center gap-1"
+        >
+          <FileDown className="h-4 w-4" />
+          Exporter Excel
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={exportToPDF}
+          className="flex items-center gap-1"
+        >
+          <FileText className="h-4 w-4" />
+          Exporter PDF
+        </Button>
+      </div>
+
       <div className="rounded-md border">
-        <Table>
+        <Table className="w-full">
           <TableHeader>
             <TableRow>
               <TableHead>NIF</TableHead>
@@ -70,9 +225,9 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
               <TableHead>Quantité</TableHead>
               <TableHead>Date arrivée Immatriculation</TableHead>
               <TableHead>Date livraison</TableHead>
-              <TableHead>À Jour</TableHead>
-              <TableHead>Rejet</TableHead>
+              <TableHead>Date rejet</TableHead>
               <TableHead>Observation</TableHead>
+              <TableHead>Nombre de jour</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -86,20 +241,16 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
                 <TableCell>{contribuable.quantite}</TableCell>
                 <TableCell>{formatDate(contribuable.dateArriveeImmat)}</TableCell>
                 <TableCell>{formatDate(contribuable.dateLivraisonSG)}</TableCell>
-                <TableCell>
-                  <Badge variant={contribuable.aJour === "Oui" ? "default" : "destructive"}>{contribuable.aJour}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={contribuable.rejet === "Non" ? "outline" : "destructive"}>{contribuable.rejet}</Badge>
-                </TableCell>
+                <TableCell>{formatDate(contribuable.dateRejet)}</TableCell>
                 <TableCell>{contribuable.observation || "-"}</TableCell>
+                <TableCell>{contribuable.nombreJoursTraitement}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
 
-      {pagination && (
+      {pagination && pagination.totalPages > 0 && pagination.page && (
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <p className="text-sm text-muted-foreground">
@@ -107,9 +258,12 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
               <strong>{Math.min(pagination.page * pagination.pageSize, pagination.total)}</strong> sur{" "}
               <strong>{pagination.total}</strong> entrées
             </p>
-            <Select value={String(pagination.pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
+            <Select 
+              value={String(pagination.pageSize)} 
+              onValueChange={(value) => onPageSizeChange && onPageSizeChange(Number(value))}
+            >
               <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={pagination.pageSize} />
+                <SelectValue placeholder={String(pagination.pageSize)} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5</SelectItem>
@@ -120,7 +274,6 @@ export const ContribuablesTable: React.FC<ContribuablesTableProps> = ({
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" onClick={() => onPageChange(1)} disabled={pagination.page <= 1}>
               <ChevronsLeft className="h-4 w-4" />
